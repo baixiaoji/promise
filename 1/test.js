@@ -1,12 +1,12 @@
 var test = require('tape');
 var invertTree = require('./index.js');
 
-test('null case', function (t) {
+test('处理 null 输入', function (t) {
     t.plan(1)
     t.equal(invertTree(null), null);
 });
 
-test('no child', function (t) {
+test('无子节点', function (t) {
     t.plan(1)
 
     const root = {
@@ -16,7 +16,7 @@ test('no child', function (t) {
 });
 
 
-test('single leaf node', function (t) {
+test('单个子节点', function (t) {
     t.plan(1)
 
     const root = {
@@ -29,7 +29,7 @@ test('single leaf node', function (t) {
 });
 
 
-test('swipe children', function (t) {
+test('交换子节点', function (t) {
     t.plan(1)
 
     const root = {
