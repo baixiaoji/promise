@@ -4,12 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "promises-aplus-tests my-promise"
+    "test": "promises-aplus-tests my-promise",
+    "build": "babel promise.js -o promise-compiled.js",
+    "final": "npm run build && npm run test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "promises-aplus-tests": "^2.1.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.7.0",
+    "@babel/core": "^7.7.2",
+    "@babel/plugin-proposal-class-properties": "^7.7.0",
+    "@babel/preset-env": "^7.7.1"
   }
 }
