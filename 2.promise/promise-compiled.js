@@ -1,146 +1,188 @@
 "use strict";
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports["default"] = void 0;
 
-function Promise(executor) {
-  var self = this;
-  self.status = 'pending';
-  self.value = undefined;
-  self.reason = undefined;
-  self.onResolvedCallbacks = [];
-  self.onRejectedCallbacks = [];
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-  function resolve(data_value) {
-    if (self.status === 'pending') {
-      self.status = 'resolved';
-      self.value = data_value;
-      self.onResolvedCallbacks.forEach(function (fn) {
-        fn();
-      });
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var Promise2 =
+/*#__PURE__*/
+function () {
+  function Promise2(fn) {
+    _classCallCheck(this, Promise2);
+
+    this.callbacks = [];
+    this.state = 'pending';
+
+    if (typeof fn !== 'function') {
+      return new Error('必须是一个函数');
     }
-  }
 
-  function reject(data_reason) {
-    if (self.status === 'pending') {
-      self.status = 'rejected';
-      self.reason = data_reason;
-      self.onRejectedCallbacks.forEach(function (fn) {
-        fn();
-      });
-    }
-  }
-
-  try {
-    executor(resolve, reject);
-  } catch (e) {
-    reject(e);
-  }
-}
-
-function resolvePromise(promise2, x, resolve, reject) {
-  //有可能这里返回的x是别人的promise 要尽可能允许其他人乱写
-  if (promise2 === x) {
-    //这里应该报一个循环引用的类型错误
-    return reject(new TypeError('循环引用'));
-  } //看x是不是一个promise promise应该是一个对象
-
-
-  var called; //表示是否调用过成功或者失败
-
-  if (x !== null && (_typeof(x) === 'object' || typeof x === 'function')) {
-    //可能是promise 看这个对象中是否有then 如果有 姑且作为promise 用try catch防止报错
     try {
-      var then = x.then;
+      fn(this.resolve.bind(this), this.reject.bind(this));
+    } catch (e) {
+      this.reject(e);
+    }
+  }
+
+  _createClass(Promise2, [{
+    key: "resolve",
+    value: function resolve(result) {
+      var _this = this;
+
+      if (this.state !== 'pending') return;
+      this.state = 'fulfilled';
+      nextTick(function () {
+        _this.callbacks.forEach(function (handler) {
+          var x;
+
+          try {
+            x = handler[0].call(undefined, result);
+          } catch (e) {
+            return _this.reject(e);
+          }
+
+          handler[2].resolveWith(x);
+        });
+      });
+    }
+  }, {
+    key: "reject",
+    value: function reject(reason) {
+      var _this2 = this;
+
+      if (this.state === 'rejected') {}
+
+      if (this.state !== 'pending') return;
+      this.state = 'rejected';
+      nextTick(function () {
+        _this2.callbacks.forEach(function (handler) {
+          var x = '';
+
+          try {
+            x = handler[1].call(undefined, reason);
+          } catch (e) {
+            return _this2.reject(e);
+          }
+
+          handler[2].resolveWith(x);
+        });
+      });
+    }
+  }, {
+    key: "then",
+    value: function then(success, fail) {
+      var handlerCollect = [];
+      handlerCollect[0] = typeof success === 'function' ? success : function (value) {
+        return value;
+      };
+      handlerCollect[1] = typeof fail === 'function' ? fail : function (error) {
+        throw error;
+      };
+      handlerCollect[2] = new Promise2(function () {});
+      this.callbacks.push(handlerCollect);
+      return handlerCollect[2];
+    }
+  }, {
+    key: "resolveWith",
+    value: function resolveWith(x) {
+      if (this === x) {
+        this.resolveWithItself();
+      } else if (x instanceof Promise2) {
+        this.resolveWithPromise(x);
+      } else if (x instanceof Object) {
+        this.resolveWithObject(x);
+      } else {
+        this.resolve(x);
+      }
+    }
+  }, {
+    key: "resolveWithObject",
+    value: function resolveWithObject(x) {
+      var then;
+
+      try {
+        then = x.then;
+      } catch (e) {
+        this.reject(e);
+      }
 
       if (typeof then === 'function') {
-        //成功
-        then.call(x, function (y) {
-          if (called) return; //避免别人写的promise中既走resolve又走reject的情况
-
-          called = true;
-          resolvePromise(promise2, y, resolve, reject);
-        }, function (err) {
-          if (called) return;
-          called = true;
-          reject(err);
-        });
+        this.resolveWithThenable(x);
       } else {
-        resolve(x); //如果then不是函数 则把x作为返回值.
+        this.resolve(x);
       }
-    } catch (e) {
-      if (called) return;
-      called = true;
-      reject(e);
     }
+  }, {
+    key: "resolveWithPromise",
+    value: function resolveWithPromise(x) {
+      var _this3 = this;
+
+      x.then(function (result) {
+        _this3.resolve(result);
+      }, function (reason) {
+        _this3.reject(reason);
+      });
+    }
+  }, {
+    key: "resolveWithItself",
+    value: function resolveWithItself() {
+      this.reject(new TypeError('不能循环调用'));
+    }
+  }, {
+    key: "resolveWithThenable",
+    value: function resolveWithThenable(x) {
+      var _this4 = this;
+
+      try {
+        x.then(function (y) {
+          _this4.resolveWith(y);
+        }, function (r) {
+          _this4.reject(r);
+        });
+      } catch (e) {
+        this.reject(e);
+      }
+    }
+  }], [{
+    key: "resolve",
+    value: function resolve(result) {
+      return new Promise2(function (resolve) {
+        resolve(result);
+      });
+    }
+  }, {
+    key: "reject",
+    value: function reject(reason) {
+      return new Promise2(function (resolve, reject) {
+        reject(reason);
+      });
+    }
+  }]);
+
+  return Promise2;
+}();
+
+var _default = Promise2;
+exports["default"] = _default;
+
+function nextTick(fn) {
+  if (process !== undefined && typeof process.nextTick === "function") {
+    return process.nextTick(fn);
   } else {
-    //普通值
-    return resolve(x);
+    var counter = 1;
+    var observer = new MutationObserver(fn);
+    var textNode = document.createTextNode(String(counter));
+    observer.observe(textNode, {
+      characterData: true
+    });
+    counter = counter + 1;
+    textNode.data = String(counter);
   }
 }
-
-Promise.prototype.then = function (onFulfiled, onRejected) {
-  //成功和失败默认不传给一个函数
-  onFulfiled = typeof onFulfiled === 'function' ? onFulfiled : function (value) {
-    return value;
-  };
-  onRejected = typeof onRejected === 'function' ? onRejected : function (err) {
-    throw err;
-  };
-  var self = this;
-  var promise2; //新增: 返回的promise
-
-  if (self.status === 'resolved') {
-    promise2 = new Promise(function (resolve, reject) {
-      setTimeout(function () {
-        //用setTimeOut实现异步
-        try {
-          var x = onFulfiled(self.value); //x可能是普通值 也可能是一个promise, 还可能是别人的promise
-
-          resolvePromise(promise2, x, resolve, reject); //写一个方法统一处理
-        } catch (e) {
-          reject(e);
-        }
-      });
-    });
-  }
-
-  if (self.status === 'rejected') {
-    promise2 = new Promise(function (resolve, reject) {
-      setTimeout(function () {
-        try {
-          var x = onRejected(self.reason);
-          resolvePromise(promise2, x, resolve, reject);
-        } catch (e) {
-          reject(e);
-        }
-      });
-    });
-  }
-
-  if (self.status === 'pending') {
-    promise2 = new Promise(function (resolve, reject) {
-      self.onResolvedCallbacks.push(function () {
-        setTimeout(function () {
-          try {
-            var x = onFulfiled(self.value);
-            resolvePromise(promise2, x, resolve, reject);
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-      self.onRejectedCallbacks.push(function () {
-        setTimeout(function () {
-          try {
-            var x = onRejected(self.reason);
-            resolvePromise(promise2, x, resolve, reject);
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-    });
-  }
-
-  return promise2;
-};
